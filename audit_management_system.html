@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Audit Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+        }
+        
+        /* Accordion Collapsible CSS Transitions */
+        .submenu-collapse {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0, 1, 0, 1), opacity 0.25s ease-in-out;
+            opacity: 0;
+        }
+        .submenu-collapse.expanded {
+            max-height: 500px; /* high enough ceiling for fluid animation */
+            transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="h-full font-sans antialiased text-slate-800 bg-slate-50 flex flex-col">
+
+    <!-- TOP GLOBAL HEADER -->
+    <header class="no-print bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 flex items-center justify-between px-4 lg:px-8 py-3 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2 rounded-xl flex items-center justify-center w-10 h-10 shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-file-signature text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                    AuditHub Enterprise <span class="bg-blue-500/20 text-blue-300 text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-500/30">v3.2</span>
+                </h1>
+                <p class="text-xs text-slate-400">CAG & Internal Compliance Portal</p>
+            </div>
+        </div>
+
+        <!-- Global Quick Actions & Controls -->
+        <div class="flex items-center gap-3">
+            <div class="hidden sm:flex items-center bg-slate-800 rounded-lg p-1 text-xs border border-slate-700">
+                <span class="px-2 text-slate-400"><i class="fa-solid fa-calendar-days text-blue-400 mr-1.5"></i>FY Selector:</span>
+                <select id="globalFYSelect" onchange="changeFinancialYear(this.value)" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                    <option value="FY 2024-25" selected>FY 2024-25</option>
+                    <option value="FY 2025-26">FY 2025-26</option>
+                    <option value="FY 2026-27">FY 2026-27</option>
+                </select>
+            </div>
+            <button onclick="openModal('addModal')" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+                <i class="fa-solid fa-plus text-xs"></i> <span>New Record</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR NAVIGATION WITH EXPANDABLE/COLLAPSIBLE ACCORDIONS -->
+        <aside class="no-print w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col border-r border-slate-800">
+            <div class="p-4 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <span>Audit Domains</span>
+                <i class="fa-solid fa-layer-group text-slate-500"></i>
+            </div>
+            
+            <nav class="flex-1 px-3 space-y-3 overflow-y-auto custom-scrollbar">
+                
+                <!-- CAG AUDIT ACCORDION GROUP -->
+                <div class="border border-slate-800/80 rounded-xl p-1 bg-slate-900/40">
+                    <button onclick="toggleDomainAccordion('cag')" id="accordionBtn-cag" class="w-full px-3 py-2 text-xs font-bold text-amber-400 flex items-center justify-between rounded-lg hover:bg-slate-800 transition-all group">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-building-columns text-amber-400"></i>
+                            CAG Audit
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] bg-slate-800 group-hover:bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">4 Pages</span>
+                            <i id="chevron-cag" class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-300"></i>
+                        </div>
+                    </button>
+                    <!-- Collapsible Submenu Container -->
+                    <div id="domainMenu-cag" class="submenu-collapse space-y-1 mt-1 pl-1">
+                        <button onclick="navigateToPage('cag-transactional')" id="pageNav-cag-transactional" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-receipt w-5 text-amber-500/80"></i>
+                            <span>Transactional Audit</span>
+                        </button>
+                        <button onclick="navigateToPage('cag-book')" id="pageNav-cag-book" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-book-open w-5 text-amber-500/80"></i>
+                            <span>Book Audit</span>
+                        </button>
+                        <button onclick="navigateToPage('cag-thematic')" id="pageNav-cag-thematic" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-diagram-project w-5 text-amber-500/80"></i>
+                            <span>Thematic Audit</span>
+                        </button>
+                        <button onclick="navigateToPage('cag-others')" id="pageNav-cag-others" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-folder-open w-5 text-amber-500/80"></i>
+                            <span>Others (PQs & PAC)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- INTERNAL AUDIT ACCORDION GROUP -->
+                <div class="border border-slate-800/80 rounded-xl p-1 bg-slate-900/40">
+                    <button onclick="toggleDomainAccordion('internal')" id="accordionBtn-internal" class="w-full px-3 py-2 text-xs font-bold text-emerald-400 flex items-center justify-between rounded-lg hover:bg-slate-800 transition-all group">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-shield-cat text-emerald-400"></i>
+                            Internal Audit
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] bg-slate-800 group-hover:bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">3 Pages</span>
+                            <i id="chevron-internal" class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-300"></i>
+                        </div>
+                    </button>
+                    <!-- Collapsible Submenu Container -->
+                    <div id="domainMenu-internal" class="submenu-collapse space-y-1 mt-1 pl-1">
+                        <button onclick="navigateToPage('internal-ph1')" id="pageNav-internal-ph1" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-hourglass-half w-5 text-emerald-500/80"></i>
+                            <span>Phase 1 (H1 Interim)</span>
+                        </button>
+                        <button onclick="navigateToPage('internal-ph2')" id="pageNav-internal-ph2" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-flag-checkered w-5 text-emerald-500/80"></i>
+                            <span>Phase 2 (H2 Final)</span>
+                        </button>
+                        <button onclick="navigateToPage('internal-reports')" id="pageNav-internal-reports" class="page-nav-btn w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-chart-pie w-5 text-purple-400"></i>
+                            <span>Reports & Analytics</span>
+                        </button>
+                    </div>
+                </div>
+
+            </nav>
+
+            <!-- User Footer Profile -->
+            <div class="p-3 border-t border-slate-800 bg-slate-950/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow">
+                        AO
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-xs font-semibold text-slate-200 truncate">Chief Audit Officer</p>
+                        <p class="text-[10px] text-slate-400 truncate">Senior Comptroller</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEWPORT CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-6 custom-scrollbar">
+
+            <!-- Mobile Navigation Switcher (Fallback for small screens) -->
+            <div class="md:hidden no-print mb-4 bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2">
+                <label class="text-xs font-bold text-slate-500 uppercase">Select Subcategory View:</label>
+                <select id="mobilePageSelect" onchange="navigateToPage(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-700">
+                    <optgroup label="CAG Audit">
+                        <option value="cag-transactional">CAG - Transactional Audit</option>
+                        <option value="cag-book">CAG - Book Audit</option>
+                        <option value="cag-thematic">CAG - Thematic Audit</option>
+                        <option value="cag-others">CAG - Others (PQs / PAC)</option>
+                    </optgroup>
+                    <optgroup label="Internal Audit">
+                        <option value="cag-ph1" value="internal-ph1">Internal - Phase 1 (H1 Mid-Year)</option>
+                        <option value="internal-ph2">Internal - Phase 2 (H2 Year-End)</option>
+                        <option value="internal-reports">Internal - Reports & Analytics</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Global Dynamic Breadcrumb & Header Bar -->
+            <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+                <div>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-1">
+                        <span id="breadcrumb-domain" class="text-blue-600 font-bold">CAG Audit</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        <span id="breadcrumb-sub">Transactional Audit Page</span>
+                    </div>
+                    <h2 id="page-head-title" class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">CAG Transactional Audit</h2>
+                </div>
+                
+                <!-- Quick Data Tools -->
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                        <input type="text" id="globalSearchInput" onkeyup="filterActiveTable()" placeholder="Search records..." class="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:border-blue-500 w-44 sm:w-60 shadow-sm">
+                    </div>
+                    <button onclick="exportActiveTableToCSV()" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition-all">
+                        <i class="fa-solid fa-file-csv text-emerald-600"></i>
+                        <span class="hidden sm:inline">Export</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 1: CAG TRANSACTIONAL AUDIT ================= -->
+            <div id="page-cag-transactional" class="page-view space-y-6">
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Total Vouchers Audited</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1">1,482</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium"><i class="fa-solid fa-arrow-up"></i> +12% vs last month</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-receipt text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Disallowed Amount</p>
+                            <h3 class="text-2xl font-bold text-rose-600 mt-1">₹ 4.85 Cr</h3>
+                            <p class="text-[10px] text-rose-500 mt-0.5 font-medium"><i class="fa-solid fa-triangle-exclamation"></i> 8 Major Queries</p>
+                        </div>
+                        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl"><i class="fa-solid fa-hand-holding-dollar text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Pending Recoveries</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1">₹ 1.22 Cr</h3>
+                            <p class="text-[10px] text-amber-600 mt-0.5 font-medium">Under Executive Review</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-clock-rotate-left text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Settled Para Count</p>
+                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">94.2%</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">Compliance Rate</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-xl"></i></div>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-blue-600"></i> CAG Transactional Audit Observations
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">Showing Voucher Level Logs</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-cag-transactional">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Voucher No</th>
+                                    <th class="p-3.5">Unit / Department</th>
+                                    <th class="p-3.5">Transaction Date</th>
+                                    <th class="p-3.5 text-right">Amount (₹)</th>
+                                    <th class="p-3.5">CAG Query Category</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-blue-600">VOUCH-2024-8891</td>
+                                    <td class="p-3.5 font-medium text-slate-800">Public Works Division IV</td>
+                                    <td class="p-3.5 text-slate-600">14 Oct 2024</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 42,50,000</td>
+                                    <td class="p-3.5 text-slate-700">Excess Payment over Contract Rate</td>
+                                    <td class="p-3.5"><span class="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-rose-200">Disallowed</span></td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('VOUCH-2024-8891', 'Public Works Division IV', '₹ 42,50,000', 'Disallowed', 'Excess payment verified against Tender Schedule B rates. Re-verification required.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-blue-600">VOUCH-2024-7712</td>
+                                    <td class="p-3.5 font-medium text-slate-800">IT Infrastructure Procurements</td>
+                                    <td class="p-3.5 text-slate-600">22 Sep 2024</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 1,18,00,000</td>
+                                    <td class="p-3.5 text-slate-700">Lack of Sanctioning Approval</td>
+                                    <td class="p-3.5"><span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-amber-200">Under Review</span></td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('VOUCH-2024-7712', 'IT Infrastructure Procurements', '₹ 1,18,00,000', 'Under Review', 'Board approval attachment is missing from ERP entry.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-blue-600">VOUCH-2024-4409</td>
+                                    <td class="p-3.5 font-medium text-slate-800">Regional Health Directorate</td>
+                                    <td class="p-3.5 text-slate-600">08 Aug 2024</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 15,20,000</td>
+                                    <td class="p-3.5 text-slate-700">GST Input Tax Credit Mismatch</td>
+                                    <td class="p-3.5"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-emerald-200">Settled</span></td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('VOUCH-2024-4409', 'Regional Health Directorate', '₹ 15,20,000', 'Settled', 'Credit ledger adjusted with tax department approval certificate.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 2: CAG BOOK AUDIT ================= -->
+            <div id="page-cag-book" class="page-view hidden space-y-6">
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">General Ledger Accounts</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1">428 GL Codes</h3>
+                            <p class="text-[10px] text-blue-600 mt-0.5 font-medium">100% Reconciled</p>
+                        </div>
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-book-journal-whills text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Trial Balance Variances</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1">₹ 18.40 Lakhs</h3>
+                            <p class="text-[10px] text-amber-600 mt-0.5 font-medium">3 Unreconciled Heads</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-scale-unbalanced text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Fixed Asset Verification</p>
+                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">98.6% Audit Pass</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">Physical Stock Match</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-boxes-packing text-xl"></i></div>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-book-open text-indigo-600"></i> CAG Book Audit Ledger Reconciliation
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">Balance Sheet & General Ledger Verification</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-cag-book">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">GL Code</th>
+                                    <th class="p-3.5">Account Ledger Description</th>
+                                    <th class="p-3.5 text-right">Book Value (₹)</th>
+                                    <th class="p-3.5 text-right">CAG Physical Audit (₹)</th>
+                                    <th class="p-3.5 font-right text-right">Variance (₹)</th>
+                                    <th class="p-3.5">CAG Remark</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-slate-700">GL-10402</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">Heavy Plant & Machinery Reserve</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 14,80,00,000</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 14,68,00,000</td>
+                                    <td class="p-3.5 font-bold text-rose-600 text-right">- ₹ 12,00,000</td>
+                                    <td class="p-3.5 text-slate-600">Depreciation rate mismatch on 4 cranes</td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('GL-10402', 'Heavy Machinery', '-₹ 12,00,000', 'Variance Discrepancy', 'Physical valuation report submitted by third party auditor varies from books.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-slate-700">GL-30211</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">Capital Reserve & Grants Received</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 8,50,00,000</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 8,50,00,000</td>
+                                    <td class="p-3.5 font-bold text-emerald-600 text-right">₹ 0</td>
+                                    <td class="p-3.5 text-slate-600">Fully Verified & Audited</td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('GL-30211', 'Capital Reserve', '₹ 0', 'Verified', 'All government grant releases matched with treasury certificates.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 3: CAG THEMATIC AUDIT ================= -->
+            <div id="page-cag-thematic" class="page-view hidden space-y-6">
+                <!-- Theme Overview Banner -->
+                <div class="bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl text-white p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <span class="bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">Strategic CAG Review</span>
+                        <h3 class="text-xl font-bold mt-1">National Infrastructure Modernization Scheme Audit</h3>
+                        <p class="text-xs text-amber-100 mt-1 max-w-2xl">Special performance and thematic evaluation focusing on fund utilization efficiency, procurement transparency, and environmental impact controls.</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 text-center min-w-[140px]">
+                        <span class="text-[11px] block text-amber-100 font-medium">Policy Compliance</span>
+                        <span class="text-2xl font-black text-white">84 / 100</span>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-diagram-project text-amber-600"></i> CAG Thematic & Performance Audits
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">Cross-Departmental Performance Reviews</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-cag-thematic">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Theme ID</th>
+                                    <th class="p-3.5">Audit Subject & Scope</th>
+                                    <th class="p-3.5">Nodal Ministry / Wing</th>
+                                    <th class="p-3.5">Audit Period</th>
+                                    <th class="p-3.5">Policy Gap Score</th>
+                                    <th class="p-3.5">Draft Stage</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-amber-600">TH-2024-EV</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">Subsidies for Electric Mobility Deployment</td>
+                                    <td class="p-3.5 text-slate-700">Heavy Industries & Transport</td>
+                                    <td class="p-3.5 text-slate-600">2021 - 2024</td>
+                                    <td class="p-3.5"><span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold">High Risk (78%)</span></td>
+                                    <td class="p-3.5"><span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-semibold">Tabled in Parliament</span></td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('TH-2024-EV', 'Electric Mobility Deployment', '78% Gap Score', 'Tabled in Parliament', 'Detailed performance evaluation reveals delays in charging point setup.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 4: CAG OTHERS (PQs & PAC) ================= -->
+            <div id="page-cag-others" class="page-view hidden space-y-6">
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Parliamentary Questions (PQs)</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1">14 Answered</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">0 Pending Submission</p>
+                        </div>
+                        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-comments text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">PAC Draft Paras</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1">6 Active</h3>
+                            <p class="text-[10px] text-amber-600 mt-0.5 font-medium">Action Taken Notes Due</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-gavel text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Inspection Reports (IR)</p>
+                            <h3 class="text-2xl font-bold text-blue-600 mt-1">32 Issued</h3>
+                            <p class="text-[10px] text-blue-600 mt-0.5 font-medium">Annual Field Audits</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-clipboard-check text-xl"></i></div>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-folder-open text-purple-600"></i> Parliamentary & PAC Compliance Tracking
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">PQs, PAC References & Inspection Reports</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-cag-others">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Ref No</th>
+                                    <th class="p-3.5">Category</th>
+                                    <th class="p-3.5">Subject Matter / Query</th>
+                                    <th class="p-3.5">Nodal Officer</th>
+                                    <th class="p-3.5">Target Date</th>
+                                    <th class="p-3.5">Compliance Status</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-purple-600">PQ-LOK-2024-104</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">Parliament Question</td>
+                                    <td class="p-3.5 text-slate-700">Audit Discrepancies in State Rural Development Grants</td>
+                                    <td class="p-3.5 text-slate-600">Dr. A. K. Sharma (Joint Sec)</td>
+                                    <td class="p-3.5 text-slate-600">28 Nov 2024</td>
+                                    <td class="p-3.5"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-semibold">Submitted to Secretariat</span></td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('PQ-LOK-2024-104', 'Rural Development Grants', 'Target: 28 Nov', 'Submitted', 'Final reply vetted by Comptroller and forwarded to Ministry of Finance.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 5: INTERNAL AUDIT PHASE 1 (H1 INTERIM) ================= -->
+            <div id="page-internal-ph1" class="page-view hidden space-y-6">
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">H1 Interim Sampling Scope</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1">65% Operations</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">April to September Audit</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-hourglass-half text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Internal Control Gaps</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1">12 Observations</h3>
+                            <p class="text-[10px] text-amber-600 mt-0.5 font-medium">4 High Severity</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Process Audit Rating</p>
+                            <h3 class="text-2xl font-bold text-blue-600 mt-1">Grade A-</h3>
+                            <p class="text-[10px] text-blue-600 mt-0.5 font-medium">Satisfactory Controls</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-shield-check text-xl"></i></div>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-cat text-emerald-600"></i> Internal Audit Phase 1 (Mid-Year H1) Log
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">Interim Operations & Control Matrix</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-internal-ph1">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Audit ID</th>
+                                    <th class="p-3.5">Business Process Area</th>
+                                    <th class="p-3.5">Key Internal Control Test</th>
+                                    <th class="p-3.5">Auditor Assessment</th>
+                                    <th class="p-3.5">Risk Rating</th>
+                                    <th class="p-3.5 font-center">Management Action Due</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-emerald-600">IA-H1-001</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">Procure-to-Pay Vendor Master</td>
+                                    <td class="p-3.5 text-slate-700">Dual Authorization on Bank Detail Edits</td>
+                                    <td class="p-3.5 text-slate-600">Found 3 bank modifications without secondary sign-off</td>
+                                    <td class="p-3.5"><span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold">High</span></td>
+                                    <td class="p-3.5 text-slate-600">15 Nov 2024</td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('IA-H1-001', 'Procure-to-Pay Vendor Master', 'High Risk', 'Pending Action', 'Recommend implementing automated workflow triggers in SAP for vendor account edits.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 6: INTERNAL AUDIT PHASE 2 (H2 FINAL) ================= -->
+            <div id="page-internal-ph2" class="page-view hidden space-y-6">
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Year-End Reconciliation</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1">100% Completed</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">H2 Closing Ledger Verified</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-flag-checkered text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Statutory & TDS Returns</p>
+                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">Fully Compliant</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">Form 24Q / 26Q Reconciled</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-file-invoice text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500">Final Risk Score</p>
+                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">92 / 100</h3>
+                            <p class="text-[10px] text-emerald-600 mt-0.5 font-medium">Low Enterprise Exposure</p>
+                        </div>
+                        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-chart-line text-xl"></i></div>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-flag-checkered text-emerald-600"></i> Internal Audit Phase 2 (Year-End H2) Summary
+                        </h3>
+                        <span class="text-xs font-medium text-slate-500">Final Statutory Verification Logs</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="table-internal-ph2">
+                            <thead class="bg-slate-100/70 text-slate-700 font-semibold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Verification ID</th>
+                                    <th class="p-3.5">Compliance Head</th>
+                                    <th class="p-3.5">Closing Balance (₹)</th>
+                                    <th class="p-3.5">TDS / Tax Challan Status</th>
+                                    <th class="p-3.5">Auditor Sign-off</th>
+                                    <th class="p-3.5 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3.5 font-mono font-bold text-emerald-600">IA-H2-FIN-801</td>
+                                    <td class="p-3.5 font-semibold text-slate-800">PF & ESI Provident Fund Remittance</td>
+                                    <td class="p-3.5 font-semibold text-slate-900 text-right">₹ 1,42,10,000</td>
+                                    <td class="p-3.5"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-semibold">Verified via TRRN</span></td>
+                                    <td class="p-3.5 text-slate-700 font-medium">Approved by Chief Auditor</td>
+                                    <td class="p-3.5 text-center">
+                                        <button onclick="viewDetailModal('IA-H2-FIN-801', 'PF & ESI Remittance', '₹ 1,42,10,000', 'Approved', 'All monthly deposit receipts verified with electronic challan returns.')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= PAGE 7: REPORTS & ANALYTICS ================= -->
+            <div id="page-internal-reports" class="page-view hidden space-y-6">
+                <!-- Analytics Dashboard Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Executive Audit & Risk Analytics Dashboard</h3>
+                        <p class="text-xs text-slate-500">Visual breakdown of CAG & Internal audit findings for <span id="analyticsFYLabel" class="font-bold text-blue-600">FY 2024-25</span></p>
+                    </div>
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Print Audit Executive Report</span>
+                    </button>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Chart 1: Audit Risk Profile Pie -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600">CAG Audit Query Breakdown</h4>
+                            <span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">All Units</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="auditRiskPieChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Category Compliance Bar Chart -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600">Audit Resolution Rates by Category</h4>
+                            <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium">FY Target: 90%</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="categoryComplianceBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Printable Comprehensive Executive Report View -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-file-contract text-blue-600"></i> Executive Audit Summary Report Card
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700">
+                        <div class="space-y-2">
+                            <h5 class="font-bold text-slate-900 uppercase tracking-wider text-[11px] text-amber-600">CAG Audit Subcategories Overview</h5>
+                            <ul class="space-y-1.5 list-disc list-inside text-slate-600">
+                                <li><strong>Transactional Audit:</strong> 1,482 Vouchers verified; ₹ 4.85 Cr total disallowed amount.</li>
+                                <li><strong>Book Audit:</strong> 428 GL Codes reconciled; 3 minor trial balance variances under resolution.</li>
+                                <li><strong>Thematic Audit:</strong> EV Subsidy performance theme completed with 78% policy alignment score.</li>
+                                <li><strong>Others (PQs/PAC):</strong> 14 Parliament questions answered with zero pending compliance backlog.</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-2">
+                            <h5 class="font-bold text-slate-900 uppercase tracking-wider text-[11px] text-emerald-600">Internal Audit Subcategories Overview</h5>
+                            <ul class="space-y-1.5 list-disc list-inside text-slate-600">
+                                <li><strong>Phase 1 (H1 Mid-Year):</strong> Operational controls assessed at Grade A-; Vendor master edits flagged for dual controls.</li>
+                                <li><strong>Phase 2 (H2 Year-End):</strong> Statutory TDS returns and PF remittances verified with 100% compliance rate.</li>
+                                <li><strong>Overall Governance Score:</strong> Rated 92/100 (Low Risk Horizon).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= GENERIC VIEW DETAIL MODAL ================= -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
+            <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <h3 class="text-sm font-bold flex items-center gap-2" id="modalRefTitle">
+                    <i class="fa-solid fa-circle-info text-blue-400"></i> Audit Record Details
+                </h3>
+                <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-white text-base">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-xs">
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div>
+                        <span class="text-slate-500 font-semibold block">Entity / Scope:</span>
+                        <span id="modalEntity" class="font-bold text-slate-900"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-semibold block">Amount / Score:</span>
+                        <span id="modalValue" class="font-bold text-blue-600"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-slate-500 font-semibold block mb-1">Audit Status:</span>
+                    <span id="modalStatus" class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold"></span>
+                </div>
+
+                <div>
+                    <span class="text-slate-500 font-semibold block mb-1">Auditor Field Notes & Observations:</span>
+                    <p id="modalNotes" class="bg-slate-50 text-slate-700 p-3 rounded-lg border border-slate-200 leading-relaxed font-mono text-[11px]"></p>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-50 border-t border-slate-100 text-right">
+                <button onclick="closeModal('detailModal')" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= GENERIC ADD NEW RECORD MODAL ================= -->
+    <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100">
+            <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-emerald-400"></i> Add New Audit Observation
+                </h3>
+                <button onclick="closeModal('addModal')" class="text-slate-400 hover:text-white text-base">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleFormSubmit(event)" class="p-5 space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Target Audit Subcategory Page</label>
+                    <select id="newRecordPage" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-semibold">
+                        <option value="cag-transactional">CAG - Transactional Audit</option>
+                        <option value="cag-book">CAG - Book Audit</option>
+                        <option value="cag-thematic">CAG - Thematic Audit</option>
+                        <option value="cag-others">CAG - Others (PQs / PAC)</option>
+                        <option value="internal-ph1">Internal - Phase 1 (H1 Mid-Year)</option>
+                        <option value="internal-ph2">Internal - Phase 2 (H2 Year-End)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Reference Code / Voucher No</label>
+                    <input type="text" id="newRefNo" required placeholder="e.g. VOUCH-2025-9901" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Department / Business Area</label>
+                    <input type="text" id="newDepartment" required placeholder="e.g. Finance & Procurement" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Amount involved (₹)</label>
+                    <input type="text" id="newAmount" placeholder="e.g. ₹ 25,00,000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Auditor Remarks</label>
+                    <textarea id="newRemarks" rows="3" required placeholder="Detail the query or audit finding..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2"></textarea>
+                </div>
+                <div class="pt-2 text-right flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addModal')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold">Cancel</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold">Save Audit Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION CONTROLLER & ROUTER SCRIPT -->
+    <script>
+        // --- GLOBAL STATE ---
+        let activePage = 'cag-transactional';
+        let activeFY = 'FY 2024-25';
+        let pieChartInst = null;
+        let barChartInst = null;
+
+        // --- ACCORDION TOGGLE ENGINE ---
+        function toggleDomainAccordion(domainGroup, forceExpand = false) {
+            const menu = document.getElementById(`domainMenu-${domainGroup}`);
+            const chevron = document.getElementById(`chevron-${domainGroup}`);
+
+            if (!menu || !chevron) return;
+
+            const isExpanded = menu.classList.contains('expanded');
+
+            if (forceExpand || !isExpanded) {
+                menu.classList.add('expanded');
+                chevron.classList.add('rotate-180');
+            } else {
+                menu.classList.remove('expanded');
+                chevron.classList.remove('rotate-180');
+            }
+        }
+
+        // --- PAGE ROUTING ENGINE (STANDALONE SUBCATEGORY VIEWS) ---
+        function navigateToPage(pageId) {
+            activePage = pageId;
+
+            // 1. Hide all subcategory page views strictly
+            document.querySelectorAll('.page-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+
+            // 2. Render only the targeted subcategory page
+            const targetView = document.getElementById(`page-${pageId}`);
+            if (targetView) targetView.classList.remove('hidden');
+
+            // 3. Highlight Sidebar Active Navigation Link
+            document.querySelectorAll('.page-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'font-bold');
+                btn.classList.add('text-slate-300');
+            });
+
+            const activeBtn = document.getElementById(`pageNav-${pageId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'text-white', 'font-bold');
+                activeBtn.classList.remove('text-slate-300');
+            }
+
+            // Auto expand domain menu containing current active subcategory
+            if (pageId.startsWith('cag-')) {
+                toggleDomainAccordion('cag', true);
+            } else if (pageId.startsWith('internal-')) {
+                toggleDomainAccordion('internal', true);
+            }
+
+            // 4. Update Mobile Dropdown Sync
+            const mobileSel = document.getElementById('mobilePageSelect');
+            if (mobileSel) mobileSel.value = pageId;
+
+            // 5. Update Dynamic Breadcrumbs & Page Titles
+            updateBreadcrumbAndHeader(pageId);
+
+            // 6. Trigger Chart Rendering if navigating to Reports Page
+            if (pageId === 'internal-reports') {
+                setTimeout(renderReportsCharts, 100);
+            }
+        }
+
+        // --- BREADCRUMB & HEADER UPDATE UTILITY ---
+        function updateBreadcrumbAndHeader(pageId) {
+            const domainSpan = document.getElementById('breadcrumb-domain');
+            const subSpan = document.getElementById('breadcrumb-sub');
+            const titleHead = document.getElementById('page-head-title');
+
+            const pageTitles = {
+                'cag-transactional': { domain: 'CAG Audit', sub: 'Transactional Audit', title: 'CAG Transactional Audit' },
+                'cag-book': { domain: 'CAG Audit', sub: 'Book Audit', title: 'CAG Book Audit & Ledger Verification' },
+                'cag-thematic': { domain: 'CAG Audit', sub: 'Thematic Audit', title: 'CAG Strategic & Thematic Audits' },
+                'cag-others': { domain: 'CAG Audit', sub: 'Others (PQs & PAC)', title: 'Parliament Questions (PQs) & PAC Paras' },
+                'internal-ph1': { domain: 'Internal Audit', sub: 'Phase 1 (H1 Interim)', title: 'Internal Audit Phase 1 (H1 Interim Operations)' },
+                'internal-ph2': { domain: 'Internal Audit', sub: 'Phase 2 (H2 Final)', title: 'Internal Audit Phase 2 (H2 Final Statutory Audit)' },
+                'internal-reports': { domain: 'Internal Audit', sub: 'Reports & Analytics', title: 'Consolidated Executive Audit Reports' }
+            };
+
+            const info = pageTitles[pageId] || { domain: 'Audit Portal', sub: 'Dashboard', title: 'Audit Management' };
+            domainSpan.innerText = info.domain;
+            subSpan.innerText = info.sub;
+            titleHead.innerText = info.title;
+        }
+
+        // --- FY SELECTOR CHANGE HANDLER ---
+        function changeFinancialYear(newFY) {
+            activeFY = newFY;
+            const fyLabel = document.getElementById('analyticsFYLabel');
+            if (fyLabel) fyLabel.innerText = newFY;
+            
+            if (activePage === 'internal-reports') {
+                renderReportsCharts();
+            }
+        }
+
+        // --- SEARCH ENGINE FOR CURRENT VISIBLE TABLE ---
+        function filterActiveTable() {
+            const input = document.getElementById('globalSearchInput');
+            const filter = input.value.toLowerCase();
+            const activeContainer = document.getElementById(`page-${activePage}`);
+            if (!activeContainer) return;
+
+            const table = activeContainer.querySelector('table');
+            if (!table) return;
+
+            const trs = table.querySelectorAll('tbody tr');
+            trs.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        // --- CSV EXPORT UTILITY FOR ACTIVE TABLE ---
+        function exportActiveTableToCSV() {
+            const activeContainer = document.getElementById(`page-${activePage}`);
+            if (!activeContainer) return;
+
+            const table = activeContainer.querySelector('table');
+            if (!table) return;
+
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                let cols = row.querySelectorAll('th, td');
+                let rowData = [];
+                // Exclude last 'Action' column in export
+                for (let i = 0; i < cols.length - 1; i++) {
+                    let text = cols[i].innerText.replace(/"/g, '""');
+                    rowData.push('"' + text.trim() + '"');
+                }
+                csv.push(rowData.join(','));
+            });
+
+            const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
+            const downloadLink = document.createElement('a');
+            downloadLink.download = `Audit_Export_${activePage}_${activeFY.replace(' ', '_')}.csv`;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // --- MODAL DIALOG CONTROLLERS ---
+        function openModal(modalId) {
+            document.getElementById(modalId)?.classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId)?.classList.add('hidden');
+        }
+
+        function viewDetailModal(ref, entity, val, status, notes) {
+            document.getElementById('modalRefTitle').innerText = 'Audit Record: ' + ref;
+            document.getElementById('modalEntity').innerText = entity;
+            document.getElementById('modalValue').innerText = val;
+            
+            const statusEl = document.getElementById('modalStatus');
+            statusEl.innerText = status;
+            statusEl.className = 'inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ' + 
+                (status.includes('Disallowed') || status.includes('High') ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200');
+
+            document.getElementById('modalNotes').innerText = notes;
+            openModal('detailModal');
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            const targetPage = document.getElementById('newRecordPage').value;
+            const ref = document.getElementById('newRefNo').value;
+            const dept = document.getElementById('newDepartment').value;
+            const amt = document.getElementById('newAmount').value || '₹ 0';
+            const remarks = document.getElementById('newRemarks').value;
+
+            // Target Table insertion
+            const targetContainer = document.getElementById(`page-${targetPage}`);
+            if (targetContainer) {
+                const tbody = targetContainer.querySelector('tbody');
+                if (tbody) {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors bg-blue-50/20";
+                    tr.innerHTML = `
+                        <td class="p-3.5 font-mono font-bold text-blue-600">${ref}</td>
+                        <td class="p-3.5 font-semibold text-slate-800">${dept}</td>
+                        <td class="p-3.5 font-semibold text-slate-900 text-right">${amt}</td>
+                        <td class="p-3.5 text-slate-600">${remarks}</td>
+                        <td class="p-3.5"><span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-amber-200">New Logged</span></td>
+                        <td class="p-3.5 text-center">
+                            <button onclick="viewDetailModal('${ref}', '${dept}', '${amt}', 'New Logged', '${remarks}')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">View</button>
+                        </td>
+                    `;
+                    tbody.prepend(tr);
+                }
+            }
+
+            closeModal('addModal');
+            navigateToPage(targetPage);
+        }
+
+        // --- CHART.JS VISUAL ANALYTICS INITIALIZER ---
+        function renderReportsCharts() {
+            const ctxPie = document.getElementById('auditRiskPieChart')?.getContext('2d');
+            const ctxBar = document.getElementById('categoryComplianceBarChart')?.getContext('2d');
+
+            if (!ctxPie || !ctxBar) return;
+
+            if (pieChartInst) pieChartInst.destroy();
+            if (barChartInst) barChartInst.destroy();
+
+            // Render Pie Chart
+            pieChartInst = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Settled Queries', 'Under Review', 'Disallowed Paras', 'Pending Recovery'],
+                    datasets: [{
+                        data: [58, 22, 12, 8],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#6366f1'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+
+            // Render Bar Chart
+            barChartInst = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Transactional', 'Book Audit', 'Thematic', 'PQs & PAC', 'Internal H1', 'Internal H2'],
+                    datasets: [{
+                        label: 'Compliance Resolution %',
+                        data: [92, 98, 84, 100, 88, 96],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { max: 100, ticks: { callback: v => v + '%' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- INITIALIZATION ON LOAD ---
+        window.onload = function() {
+            // Expand CAG domain by default and show Transactional Audit
+            toggleDomainAccordion('cag', true);
+            navigateToPage('cag-transactional');
+        };
+    </script>
+</body>
+</html>
